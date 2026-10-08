@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quest of Syntax - Game Edukasi Literasi TIK</title>
+  <meta name="description" content="Game edukasi RPG interaktif untuk pembelajaran logika informatika dan dasar pemrograman. Tugas Pertemuan 6 - Kelompok 6.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ================= TITLE SCREEN ================= -->
+  <section id="screen-title" class="screen active">
+    <div class="title-inner">
+      <p class="title-eyebrow">GAME EDUKASI &bull; LITERASI TIK</p>
+      <h1 class="game-title">QUEST<br><span>OF SYNTAX</span></h1>
+      <p class="title-sub">Selamatkan sistem komputer dari serangan glitch dengan kekuatan logika &amp; dasar pemrograman!</p>
+      <div class="title-actions">
+        <button id="btn-start" class="pixel-btn big gold">&#9654; MULAI PETUALANGAN</button>
+        <button id="btn-continue" class="pixel-btn big green hidden">&#10132; LANJUTKAN</button>
+        <button id="btn-sound-title" class="icon-btn" title="Nyalakan / matikan suara">&#128266;</button>
+      </div>
+      <p class="title-credit">Kelompok 6 &bull; Pendidikan Teknologi Informasi &bull; Universitas Lampung</p>
+    </div>
+  </section>
+
+  <!-- ================= INTRO / LORE SCREEN ================= -->
+  <section id="screen-intro" class="screen">
+    <div class="intro-card">
+      <p class="intro-tag">&#9888; MISI PENYELAMATAN SISTEM</p>
+      <div class="intro-text" id="intro-text"></div>
+      <div class="intro-actions">
+        <button id="btn-intro-go" class="pixel-btn big green hidden">&#128506; MASUK KE PETA</button>
+        <button id="btn-intro-skip" class="pixel-btn secondary">&#9193; LEWATI</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MAP SCREEN ================= -->
+  <section id="screen-map" class="screen">
+    <header class="top-bar">
+      <div class="brand">QUEST OF SYNTAX</div>
+      <div class="top-actions">
+        <span class="score-chip">&#11088; <span id="map-score" class="js-score">0</span></span>
+        <button id="btn-sound" class="icon-btn" title="Nyalakan / matikan suara">&#128266;</button>
+        <button id="btn-reset" class="icon-btn" title="Hapus progres permainan">&#128465;</button>
+      </div>
+    </header>
+    <p class="map-subtitle">Pilih zona untuk melanjutkan misi penyelamatan NEXUS. Selesaikan satu zona untuk membuka zona berikutnya!</p>
+    <div class="map-path" id="map-path"></div>
+    <footer class="map-footer" id="map-footer"></footer>
+  </section>
+
+  <!-- ================= BATTLE / EXPLORATION SCREEN ================= -->
+  <section id="screen-battle" class="screen">
+    <div class="battle-wrap">
+
+      <header class="battle-hud">
+        <div class="hud-zone"><span id="battle-zone-icon">&#127794;</span><span id="battle-zone-name">Hutan Logika</span></div>
+        <div class="hud-score">&#11088; <span id="battle-score" class="js-score">0</span></div>
+        <div class="hud-hp" id="battle-hearts"></div>
+      </header>
+
+      <div class="map-status" id="map-status">&#128126; Monster tersisa: 5 / 5</div>
+
+      <div class="map-camera" id="map-camera">
+        <div class="map-mover" id="map-mover">
+          <div class="map-viewport" id="map-viewport">
+            <div class="game-map" id="game-map"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dpad">
+        <button class="dpad-btn" id="dpad-up" title="Naik">&#9650;</button>
+        <div class="dpad-bottom">
+          <button class="dpad-btn" id="dpad-left" title="Kiri">&#9664;</button>
+          <button class="dpad-btn" id="dpad-down" title="Turun">&#9660;</button>
+          <button class="dpad-btn" id="dpad-right" title="Kanan">&#9654;</button>
+        </div>
+      </div>
+      <p class="dpad-hint">Gerakkan penjelajah dengan tombol panah / WASD di keyboard, atau tombol di atas. Dekati monster untuk memicu tantangan!</p>
+
+    </div>
+
+    <!-- Question modal (muncul saat monster menghadang) -->
+    <div class="question-modal" id="question-modal">
+      <div class="question-card">
+        <div class="q-monster-line">
+          <span class="q-monster-emoji" id="q-monster-emoji">&#128126;</span>
+          <span id="q-monster-name">Monster menghadang!</span>
+        </div>
+        <div class="dialog-box">
+          <div class="question-meta">&#9876; TANTANGAN <span id="q-counter">1/5</span></div>
+          <p class="question-text" id="question-text">Memuat soal...</p>
+        </div>
+        <div class="options" id="options"></div>
+        <div class="battle-actions">
+          <button id="btn-hint" class="pixel-btn util">&#128161; HINT <span class="cost">(-20)</span></button>
+          <button id="btn-fifty" class="pixel-btn util">&#9889; BANTUAN 50:50 <span class="cost">(-30)</span></button>
+        </div>
+        <div class="hint-box hidden" id="hint-box"></div>
+      </div>
+    </div>
+
+    <!-- Feedback overlay -->
+    <div class="feedback-overlay" id="feedback-overlay">
+      <div class="feedback-card" id="feedback-card">
+        <h3 class="feedback-title" id="feedback-title">BENAR!</h3>
+        <p class="feedback-text" id="feedback-text"></p>
+        <button id="btn-feedback-next" class="pixel-btn big green">LANJUT &#10132;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RESULT SCREEN ================= -->
+  <section id="screen-result" class="screen">
+    <div class="result-card" id="result-card">
+      <div class="result-emoji" id="result-emoji">&#127942;</div>
+      <h2 class="result-title" id="result-title">ZONA DIBERSIHKAN!</h2>
+      <div class="result-stars" id="result-stars"></div>
+      <p class="result-text" id="result-text"></p>
+      <div class="result-stats" id="result-stats"></div>
+      <div class="result-actions" id="result-actions"></div>
+    </div>
+  </section>
+
+  <script src="js/questions.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
