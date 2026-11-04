@@ -94,8 +94,7 @@ img { image-rendering: pixelated; }
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(7, 10, 20, 0.35) 0%, rgba(7, 10, 20, 0.05) 40%, rgba(7, 10, 20, 0.92) 82%),
+  background: linear-gradient(180deg, rgba(7, 10, 20, 0.35) 0%, rgba(7, 10, 20, 0.05) 40%, rgba(7, 10, 20, 0.92) 82%),
     url("../assets/bg-title.png");
   background-size: cover;
   background-position: center;
