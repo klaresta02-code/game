@@ -15,6 +15,8 @@
      menyelesaikan zona.
    - Hint (-20 poin) dan bantuan 50:50 (-30 poin) tersedia sekali per soal.
    - Progres, skor, dan bintang disimpan di localStorage.
+   - Backsound chiptune prosedural (Web Audio) berjalan terus dan berganti
+     tema mengikuti layar/zona, serta meredam otomatis saat soal muncul.
    ===================================================================== */
 
 "use strict";
@@ -88,6 +90,7 @@ function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   $(id).classList.add("active");
   window.scrollTo(0, 0);
+  syncMusicToScreen(id);
 }
 
 function toast(msg) {
@@ -197,8 +200,399 @@ function toggleSound() {
   save.muted = !soundOn;
   persist();
   updateSoundButtons();
-  if (soundOn) sfx("click");
+  if (soundOn) {
+    ensureAudio();
+    sfx("click");
+    startMusic(music.trackKey);
+  } else {
+    stopMusic();
+  }
 }
+
+/* ---------- Mesin Backsound (Chiptune Prosedural) ----------
+   Musik latar dibangkitkan langsung lewat Web Audio tanpa file audio
+   eksternal, jadi tetap berbunyi saat game dibuka lewat file:// maupun
+   tanpa koneksi internet. Setiap layar/zona memakai tema yang berbeda.
+   Satu ketukan pada pola = satu nada kedelapan (eighth note). */
+
+const MUSIC_VOLUME = 0.4;
+
+const MUSIC_TRACKS = {
+  /* Tema layar judul: heroik, D minor. */
+  title: {
+    bpm: 96,
+    chords: [
+      { bass: 50, tones: [50, 53, 57, 62] },  // Dm
+      { bass: 46, tones: [46, 50, 53, 58] },  // Bb
+      { bass: 53, tones: [53, 57, 60, 65] },  // F
+      { bass: 48, tones: [48, 52, 55, 60] }   // C
+    ],
+    lead: { wave: "square", vol: 0.045, pattern: [2, null, 3, null, 2, 1, 4, null, 1, null, 2, 3, null, 2, 5, null] },
+    arp: { wave: "triangle", vol: 0.03, pattern: [0, 1, 2, 3, 2, 1, 2, 1] },
+    bassWave: "triangle",
+    bassVol: 0.1,
+    bassPattern: [0, null, 7, null, 0, null, 7, null],
+    drums: { kick: [1, 0, 0, 0, 1, 0, 0, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: [0, 1, 0, 1, 0, 1, 0, 1], hatVol: 0.02 }
+  },
+
+  /* Tema peta: tenang, C mayor, cocok untuk memilih zona. */
+  map: {
+    bpm: 88,
+    chords: [
+      { bass: 48, tones: [48, 52, 55, 60] },  // C
+      { bass: 43, tones: [43, 47, 50, 55] },  // G
+      { bass: 45, tones: [45, 48, 52, 57] },  // Am
+      { bass: 41, tones: [41, 45, 48, 53] }   // F
+    ],
+    lead: { wave: "triangle", vol: 0.05, pattern: [4, null, 2, 3, null, 2, 1, null, 4, null, 2, null, 3, 2, null, null] },
+    arp: { wave: "triangle", vol: 0.026, pattern: [0, 1, 2, 1, 0, 1, 3, 1] },
+    bassWave: "sine",
+    bassVol: 0.11,
+    bassPattern: [0, null, null, 0, 7, null, null, null],
+    drums: { kick: [1, 0, 0, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 0, 0, 0, 0], hat: [0, 1, 0, 1, 0, 1, 0, 1], hatVol: 0.016 }
+  },
+
+  /* Zona 1 Hutan Logika: ceria dan lincah, A minor. */
+  zone1: {
+    bpm: 118,
+    chords: [
+      { bass: 45, tones: [45, 48, 52, 57] },  // Am
+      { bass: 41, tones: [41, 45, 48, 53] },  // F
+      { bass: 48, tones: [48, 52, 55, 60] },  // C
+      { bass: 43, tones: [43, 47, 50, 55] }   // G
+    ],
+    lead: { wave: "square", vol: 0.042, pattern: [2, 3, 2, 1, 0, null, 1, 2, 3, null, 2, 1, 2, 3, 6, null] },
+    arp: { wave: "square", vol: 0.02, pattern: [0, 2, 1, 3, 2, 3, 1, 2] },
+    bassWave: "triangle",
+    bassVol: 0.1,
+    bassPattern: [0, 0, null, 7, 0, null, 7, null],
+    drums: { kick: [1, 0, 0, 0, 1, 0, 0, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: [1, 1, 1, 1, 1, 1, 1, 1], hatVol: 0.016 }
+  },
+
+  /* Zona 2 Kastil Algoritma: megah dan tertata, D minor. */
+  zone2: {
+    bpm: 100,
+    chords: [
+      { bass: 50, tones: [50, 53, 57, 62] },  // Dm
+      { bass: 46, tones: [46, 50, 53, 58] },  // Bb
+      { bass: 53, tones: [53, 57, 60, 65] },  // F
+      { bass: 45, tones: [45, 49, 52, 57] }   // A
+    ],
+    lead: { wave: "square", vol: 0.043, pattern: [3, null, 2, 1, 2, null, 4, null, 2, null, 1, 4, 1, 2, 5, null] },
+    arp: { wave: "triangle", vol: 0.03, pattern: [0, 1, 2, 3, 2, 1, 0, 1] },
+    bassWave: "triangle",
+    bassVol: 0.11,
+    bassPattern: [0, null, 0, null, 7, null, 0, 7],
+    drums: { kick: [1, 0, 0, 0, 1, 0, 0, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: [0, 1, 0, 1, 0, 1, 0, 1], hatVol: 0.018 }
+  },
+
+  /* Zona 3 Gua Variabel: misterius dan lapang, E minor. */
+  zone3: {
+    bpm: 82,
+    chords: [
+      { bass: 40, tones: [52, 55, 59, 64] },  // Em
+      { bass: 36, tones: [48, 52, 55, 60] },  // C
+      { bass: 43, tones: [55, 59, 62, 67] },  // G
+      { bass: 38, tones: [50, 54, 57, 62] }   // D
+    ],
+    lead: { wave: "triangle", vol: 0.052, pattern: [4, null, null, 2, null, 1, null, null, 3, null, null, 2, null, 1, 5, null] },
+    arp: { wave: "sine", vol: 0.032, pattern: [0, null, 2, null, 1, null, 3, null] },
+    bassWave: "sine",
+    bassVol: 0.12,
+    bassPattern: [0, null, null, null, 0, null, 7, null],
+    drums: { kick: [1, 0, 0, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0], hatVol: 0.012 }
+  },
+
+  /* Zona 4 Menara Debugging: tegang dan cepat, C# minor. */
+  zone4: {
+    bpm: 132,
+    chords: [
+      { bass: 49, tones: [61, 64, 68, 73] },  // C#m
+      { bass: 45, tones: [57, 61, 64, 69] },  // A
+      { bass: 40, tones: [52, 56, 59, 64] },  // E
+      { bass: 47, tones: [59, 63, 66, 71] }   // B
+    ],
+    lead: { wave: "square", vol: 0.04, pattern: [3, 2, 1, 2, 3, 2, 5, null, 2, 1, 0, 1, 2, 3, 6, 1] },
+    arp: { wave: "square", vol: 0.02, pattern: [0, 1, 2, 3, 0, 1, 2, 3] },
+    bassWave: "triangle",
+    bassVol: 0.1,
+    bassPattern: [0, 0, 0, 7, 0, 0, 7, 7],
+    drums: { kick: [1, 0, 1, 0, 1, 0, 1, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: [1, 1, 1, 1, 1, 1, 1, 1], hatVol: 0.018 }
+  },
+
+  /* Tema layar hasil: hangat dan lega, F mayor. */
+  result: {
+    bpm: 96,
+    chords: [
+      { bass: 41, tones: [53, 57, 60, 65] },  // F
+      { bass: 50, tones: [50, 53, 57, 62] },  // Dm
+      { bass: 46, tones: [46, 50, 53, 58] },  // Bb
+      { bass: 48, tones: [48, 52, 55, 60] }   // C
+    ],
+    lead: { wave: "triangle", vol: 0.052, pattern: [2, null, 1, 4, 1, null, 2, null, 3, null, 2, 1, 4, null, null, null] },
+    arp: { wave: "triangle", vol: 0.03, pattern: [0, 1, 2, 3, 2, 1, 0, null] },
+    bassWave: "triangle",
+    bassVol: 0.1,
+    bassPattern: [0, null, 7, null, 0, null, 7, null],
+    drums: { kick: [1, 0, 0, 0, 1, 0, 0, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: [0, 1, 0, 1, 0, 1, 0, 1], hatVol: 0.016 }
+  }
+};
+
+const music = {
+  bus: null,
+  master: null,
+  delay: null,
+  send: null,
+  noiseBuffer: null,
+  trackKey: "title",
+  playing: false,
+  ducked: false,
+  pendingStart: false,
+  step: 0,
+  nextTime: 0,
+  timer: null
+};
+
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function initMusicNodes() {
+  if (music.bus || !audioCtx) return;
+
+  music.bus = audioCtx.createGain();
+  music.bus.gain.value = 0.0001;
+
+  /* Lowpass + kompresor menjaga chiptune tetap lembut di telinga. */
+  const toneFilter = audioCtx.createBiquadFilter();
+  toneFilter.type = "lowpass";
+  toneFilter.frequency.value = 5200;
+  toneFilter.Q.value = 0.6;
+
+  const comp = audioCtx.createDynamicsCompressor();
+  comp.threshold.value = -18;
+  comp.knee.value = 12;
+  comp.ratio.value = 3;
+
+  music.master = audioCtx.createGain();
+  music.master.gain.value = MUSIC_VOLUME;
+
+  music.bus.connect(toneFilter);
+  toneFilter.connect(comp);
+  comp.connect(music.master);
+  music.master.connect(audioCtx.destination);
+
+  /* Delay ringan supaya melodi tidak terasa kering. */
+  music.delay = audioCtx.createDelay(1);
+  music.delay.delayTime.value = 0.3;
+  const feedback = audioCtx.createGain();
+  feedback.gain.value = 0.2;
+  const wet = audioCtx.createGain();
+  wet.gain.value = 0.4;
+  music.delay.connect(feedback);
+  feedback.connect(music.delay);
+  music.delay.connect(wet);
+  wet.connect(music.bus);
+
+  music.send = audioCtx.createGain();
+  music.send.gain.value = 0.16;
+  music.send.connect(music.delay);
+
+  /* Satu buffer noise dipakai ulang untuk hi-hat dan snare. */
+  const len = Math.floor(audioCtx.sampleRate * 0.5);
+  music.noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const data = music.noiseBuffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+}
+
+function musicNote(midi, time, dur, wave, vol, send) {
+  const length = Math.max(dur, 0.05);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = wave;
+  osc.frequency.setValueAtTime(midiToFreq(midi), time);
+  gain.gain.setValueAtTime(0.0001, time);
+  gain.gain.exponentialRampToValueAtTime(vol, time + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + length);
+  osc.connect(gain);
+  gain.connect(music.bus);
+  if (send && music.send) gain.connect(music.send);
+  osc.start(time);
+  osc.stop(time + length + 0.03);
+}
+
+function musicNoise(time, dur, vol, filterType, freq) {
+  if (!music.noiseBuffer) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = music.noiseBuffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.frequency.value = freq;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(vol, time);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  src.connect(filter);
+  filter.connect(gain);
+  gain.connect(music.bus);
+  src.start(time);
+  src.stop(time + dur + 0.02);
+}
+
+function musicKick(time) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(150, time);
+  osc.frequency.exponentialRampToValueAtTime(45, time + 0.12);
+  gain.gain.setValueAtTime(0.22, time);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
+  osc.connect(gain);
+  gain.connect(music.bus);
+  osc.start(time);
+  osc.stop(time + 0.2);
+}
+
+function musicSnare(time, vol) {
+  musicNoise(time, 0.13, vol || 0.11, "bandpass", 1900);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(190, time);
+  gain.gain.setValueAtTime(0.05, time);
+  gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.09);
+  osc.connect(gain);
+  gain.connect(music.bus);
+  osc.start(time);
+  osc.stop(time + 0.1);
+}
+
+function musicHat(time, vol) {
+  musicNoise(time, 0.035, vol || 0.018, "highpass", 7500);
+}
+
+function scheduleMusicStep(step, time, track) {
+  const stepDur = 60 / track.bpm / 2;
+  const bar = Math.floor(step / 8);
+  const s = step % 8;
+  const chord = track.chords[bar % track.chords.length];
+
+  const bassOffset = track.bassPattern[s];
+  if (bassOffset != null) {
+    musicNote(chord.bass + bassOffset, time, stepDur * 0.9, track.bassWave, track.bassVol, false);
+  }
+
+  const arpVal = track.arp.pattern[s];
+  if (arpVal != null) {
+    const idx = arpVal % 4;
+    const oct = arpVal >= 4 ? 12 : 0;
+    musicNote(chord.tones[idx] + oct, time, stepDur * 0.5, track.arp.wave, track.arp.vol, true);
+  }
+
+  const leadVal = track.lead.pattern[step % track.lead.pattern.length];
+  if (leadVal != null) {
+    const idx = leadVal % 4;
+    const oct = leadVal >= 4 ? 0 : 12;
+    musicNote(chord.tones[idx] + oct, time, stepDur * 1.6, track.lead.wave, track.lead.vol, true);
+  }
+
+  const drums = track.drums;
+  if (drums.kick[s]) musicKick(time);
+  if (drums.snare[s]) musicSnare(time);
+  if (drums.hat[s]) musicHat(time, drums.hatVol);
+  if (bar % 4 === 3 && s === 7) musicSnare(time + stepDur / 2, 0.07);
+}
+
+function musicTick() {
+  if (!music.playing || !audioCtx) return;
+  const track = MUSIC_TRACKS[music.trackKey] || MUSIC_TRACKS.title;
+  const stepDur = 60 / track.bpm / 2;
+  const horizon = audioCtx.currentTime + 0.18;
+  if (music.nextTime < audioCtx.currentTime - 0.2) music.nextTime = audioCtx.currentTime + 0.05;
+  let guard = 0;
+  while (music.nextTime < horizon && guard < 24) {
+    scheduleMusicStep(music.step, music.nextTime, track);
+    music.step = (music.step + 1) % 512;
+    music.nextTime += stepDur;
+    guard++;
+  }
+}
+
+function applyMusicLevel() {
+  if (!audioCtx || !music.bus) return;
+  const now = audioCtx.currentTime;
+  const target = (!soundOn || !music.playing) ? 0.0001 : (music.ducked ? 0.32 : 1);
+  music.bus.gain.cancelScheduledValues(now);
+  music.bus.gain.setTargetAtTime(target, now, 0.1);
+}
+
+function startMusic(key) {
+  music.trackKey = (key && MUSIC_TRACKS[key]) ? key : "title";
+  if (!soundOn) return;
+  ensureAudio();
+  if (!audioCtx) return;
+  if (document.hidden) {
+    /* Tab sedang tidak terlihat: mulai begitu pemain kembali. */
+    music.pendingStart = true;
+    return;
+  }
+  music.pendingStart = false;
+  initMusicNodes();
+  if (!music.bus) return;
+
+  const bpm = MUSIC_TRACKS[music.trackKey].bpm;
+  if (music.delay) music.delay.delayTime.setTargetAtTime((60 / bpm) * 0.75, audioCtx.currentTime, 0.2);
+
+  if (!music.playing) {
+    music.playing = true;
+    music.step = 0;
+    music.nextTime = audioCtx.currentTime + 0.08;
+    clearInterval(music.timer);
+    music.timer = setInterval(musicTick, 30);
+  }
+  applyMusicLevel();
+}
+
+function stopMusic() {
+  music.playing = false;
+  music.pendingStart = false;
+  clearInterval(music.timer);
+  music.timer = null;
+  applyMusicLevel();
+}
+
+/* Redam musik saat pemain membaca soal, lalu kembalikan setelahnya. */
+function duckMusic(on) {
+  music.ducked = !!on;
+  applyMusicLevel();
+}
+
+/* Pilih tema musik otomatis sesuai layar yang sedang tampil. */
+function syncMusicToScreen(id) {
+  if (id === "screen-battle") startMusic("zone" + (state.zoneIdx + 1));
+  else if (id === "screen-result") startMusic("result");
+  else if (id === "screen-map") startMusic("map");
+  else startMusic("title");
+}
+
+/* Hemat sumber daya saat tab tidak terlihat. */
+document.addEventListener("visibilitychange", () => {
+  if (!audioCtx) return;
+  if (document.hidden) {
+    if (!music.playing) return;
+    clearInterval(music.timer);
+    music.timer = null;
+    if (music.bus) music.bus.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.05);
+    return;
+  }
+  if (music.pendingStart) {
+    startMusic(music.trackKey);
+    return;
+  }
+  if (!music.playing) return;
+  music.nextTime = audioCtx.currentTime + 0.08;
+  if (!music.timer) music.timer = setInterval(musicTick, 30);
+  applyMusicLevel();
+});
 
 /* ---------- Layar Judul & Intro ---------- */
 const LORE_TEXT =
@@ -692,11 +1086,13 @@ function openQuestion(monster) {
   fiftyBtn.innerHTML = "\u26A1 BANTUAN 50:50 <span class=\"cost\">(-" + FIFTY_COST + ")</span>";
 
   $("question-modal").classList.add("open");
+  duckMusic(true);
   sfx("monster");
 }
 
 function hideQuestionModal() {
   $("question-modal").classList.remove("open");
+  duckMusic(false);
   state.modalOpen = false;
   state.activeMonster = null;
 }
@@ -1126,6 +1522,11 @@ function init() {
 
   /* Intro text: pertahankan baris baru */
   $("intro-text").style.whiteSpace = "pre-wrap";
+
+  /* Autoplay browser baru mengizinkan suara setelah interaksi pertama. */
+  document.addEventListener("pointerdown", function firstTap() {
+    if (soundOn) startMusic(music.trackKey);
+  }, { once: true });
 
   renderMap();
 }
