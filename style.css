@@ -94,8 +94,9 @@ img { image-rendering: pixelated; }
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 10, 20, 0.35) 0%, rgba(7, 10, 20, 0.05) 40%, rgba(7, 10, 20, 0.92) 82%),
-    url("../assets/bg-title.png");
+  background:
+    linear-gradient(180deg, rgba(7, 10, 20, 0.35) 0%, rgba(7, 10, 20, 0.05) 40%, rgba(7, 10, 20, 0.92) 82%),
+    url("bg-title.png");
   background-size: cover;
   background-position: center;
   image-rendering: pixelated;
@@ -105,7 +106,7 @@ img { image-rendering: pixelated; }
 .title-inner {
   position: relative;
   z-index: 1;
-  padding: 24px 20px 56px;
+  padding: 24px 20px 36px;
   max-width: 860px;
   width: 100%;
   animation: fadeUp 0.9s ease both;
@@ -138,7 +139,7 @@ img { image-rendering: pixelated; }
   font-size: 24px;
   color: var(--text);
   max-width: 640px;
-  margin: 14px auto 30px;
+  margin: 12px auto 24px;
   text-shadow: 1px 1px 0 var(--shadow);
 }
 
@@ -150,11 +151,56 @@ img { image-rendering: pixelated; }
   align-items: center;
 }
 
-.title-credit {
-  margin-top: 34px;
-  font-size: 19px;
-  color: var(--muted);
+.title-audio-hint {
+  margin-top: 14px;
+  font-size: 18px;
+  color: var(--cyan);
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+}
+
+.title-team {
+  margin: 16px auto 0;
+  max-width: 700px;
+  padding: 12px 18px 14px;
+  background: rgba(11, 15, 30, 0.78);
+  border: 3px solid var(--border);
+  box-shadow: 0 5px 0 var(--shadow);
+}
+
+.team-label {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  line-height: 1.9;
   letter-spacing: 1px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 6px 24px;
+}
+
+.team-member {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 2px;
+  border-bottom: 1px dashed rgba(159, 176, 216, 0.25);
+  font-size: 18px;
+  color: var(--text);
+  text-align: left;
+}
+
+.team-member em {
+  font-style: normal;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: var(--gold);
+  white-space: nowrap;
 }
 
 /* =====================================================================
