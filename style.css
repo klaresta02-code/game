@@ -152,7 +152,7 @@ img { image-rendering: pixelated; }
 }
 
 .title-audio-hint {
-  margin-top: 14px;
+  margin-top: 18px;
   font-size: 18px;
   color: var(--cyan);
   letter-spacing: 0.5px;
@@ -160,7 +160,7 @@ img { image-rendering: pixelated; }
 }
 
 .title-team {
-  margin: 16px auto 0;
+  margin: 38px auto 0;
   max-width: 700px;
   padding: 12px 18px 14px;
   background: rgba(11, 15, 30, 0.78);
