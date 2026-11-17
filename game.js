@@ -72,6 +72,7 @@ const state = {
   feedbackOpen: false,
   modalOpen: false,
   busy: false,
+  zoneEnding: false,
   lastMoveAt: 0
 };
 
@@ -782,6 +783,7 @@ function startZone(i) {
   state.feedbackOpen = false;
   state.modalOpen = false;
   state.busy = false;
+  state.zoneEnding = false;
   state.activeMonster = null;
   state.lastMoveAt = 0;
 
@@ -811,6 +813,17 @@ function startZone(i) {
   mover.style.transition = "";
   sfx("start");
   toast(zone.icon + " " + zone.boss.intro);
+}
+
+/* Keluar dari zona aktif tanpa menyelesaikannya, kembali ke peta. */
+function leaveZone() {
+  hideFeedback();
+  hideQuestionModal();
+  state.busy = false;
+  state.zoneEnding = false;
+  sfx("click");
+  renderMap();
+  showScreen("screen-map");
 }
 
 function buildGrid(zone) {
@@ -1221,6 +1234,7 @@ function defeatActiveMonster() {
 }
 
 function openPortal() {
+  if (!$("screen-battle").classList.contains("active") || state.zoneEnding) return;
   const tile = $("portal-tile");
   if (tile) tile.classList.add("open");
   sfx("portal");
@@ -1230,6 +1244,7 @@ function openPortal() {
 /* ---------- Zona Selesai / Gagal ---------- */
 function zoneComplete() {
   state.busy = true;
+  state.zoneEnding = true;
   const zone = currentZone();
 
   const stars = state.wrongInZone === 0 ? 3 : state.wrongInZone <= 2 ? 2 : 1;
@@ -1246,6 +1261,8 @@ function zoneComplete() {
   sfx("victory");
 
   setTimeout(() => {
+    if (!state.zoneEnding) return;
+    state.zoneEnding = false;
     state.busy = false;
     const allCleared = ZONES.every((z) => save.stars[z.key]);
     if (allCleared) renderVictoryResult();
@@ -1256,8 +1273,11 @@ function zoneComplete() {
 
 function failZone() {
   state.busy = true;
+  state.zoneEnding = true;
   sfx("gameover");
   setTimeout(() => {
+    if (!state.zoneEnding) return;
+    state.zoneEnding = false;
     state.busy = false;
     renderFailResult();
     showScreen("screen-result");
@@ -1499,6 +1519,7 @@ function init() {
   $("btn-sound").addEventListener("click", toggleSound);
   $("btn-sound-title").addEventListener("click", toggleSound);
   $("btn-reset").addEventListener("click", resetProgress);
+  $("btn-battle-map").addEventListener("click", leaveZone);
   $("btn-hint").addEventListener("click", useHint);
   $("btn-fifty").addEventListener("click", useFifty);
 

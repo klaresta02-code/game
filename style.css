@@ -263,6 +263,31 @@ img { image-rendering: pixelated; }
   padding: 0 0 40px;
 }
 
+#screen-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 10, 20, 0.45) 0%, rgba(7, 10, 20, 0.78) 55%, rgba(11, 15, 30, 0.96) 100%),
+    url("bg-map.png");
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  z-index: 0;
+}
+
+#screen-map .map-subtitle,
+#screen-map .map-path,
+#screen-map .map-footer {
+  position: relative;
+  z-index: 1;
+}
+
+#screen-map .map-subtitle,
+#screen-map .map-footer {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
 .top-bar {
   display: flex;
   align-items: center;
@@ -474,6 +499,11 @@ img { image-rendering: pixelated; }
   font-size: 22px;
   letter-spacing: 2px;
   white-space: nowrap;
+}
+
+.btn-back-map {
+  font-size: 10px;
+  padding: 9px 12px;
 }
 
 .heart { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5)); }
